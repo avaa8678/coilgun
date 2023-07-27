@@ -1,6 +1,5 @@
 /*
-Coilgun Project
-Copyright 2023 Ava Chen (avaleichen@gmail.com) Annie Peng () Sophia Chen ()
+Test Update
 
 Hardware Setup
 ==================================================================================================
