@@ -8,7 +8,7 @@ Ava Chen | Annie Peng | Sophia Chen
 - [Pictures/Screenshots](https://github.com/avaa8678/coilgun/tree/main/docs/hardware) - Project pictures, screenshots
 - [Lab Log Screenshot](https://github.com/avaa8678/coilgun/tree/main/docs/lab%20notes) - Lab logs
 
-## Tuturios
+## Tutorial
 - ["Exploring Arduino"](https://www.exploringarduino.com/content2/ch1/) - *Jeremy Blum*
 - ["Arduino API"](https://www.arduino.cc/reference/en/) - *API References from official Arduino website*
 - ["GitHub Tutorial without using the Command Line"](https://www.youtube.com/watch?v=tCuPbW31vAw&t=600s) - *Andreas Spiess (Youtuber)*
