@@ -1,7 +1,4 @@
 /*
-Coilgun Project
-Copyright 2023 Ava Chen (avaleichen@gmail.com) Annie Peng () Sophia Chen ()
-
 Hardware Setup
 ==================================================================================================
 Arduino Mega 2560 + Deek-Robot Data Logging Shield v1.0
