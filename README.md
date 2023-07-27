@@ -3,7 +3,7 @@
 
 Ava Chen | Annie Peng | Sophia Chen
 
-## Development Notes
+## Links
 - [Google Drive (Internal)](https://drive.google.com/drive/u/0/folders/1kPVlKQgt4IuTnx3cwziApn0uUnmumPuY) - Project learning materials, manual, instructions etc.
 - [Pictures/Screenshots](https://github.com/avaa8678/coilgun/tree/main/docs/hardware) - Project pictures, screenshots
 - [Lab Log Screenshot](https://github.com/avaa8678/coilgun/tree/main/docs/lab%20notes) - Lab logs
