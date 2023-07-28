@@ -1,4 +1,6 @@
 //one sensor, needs blocked -> not blocked, not blocked -> block to find speed with length of magnet
+
+//TODO Need to clean up this code, for example, write wiring instruction etc.
             
 int speedPin = 2;                        
 
