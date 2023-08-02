@@ -3,7 +3,7 @@
 #include <TimerOne.h>
 
 const int CS_PIN = 53;
-const int SAMPLINGPERIOD = 10000;
+const int SAMPLINGPERIOD = 1000;
 const int BUFFERSIZE = 750;
 
 File dataFile;
@@ -68,9 +68,9 @@ void writeToCard()
 {
   
     if (counter % 10 == 0)
-    {  Serial.println(micros());
+    // {  Serial.println(micros());
        valarray[counter] = micros();   
-    }
+    //}
     else
       valarray[counter] = micros();
     counter++;
