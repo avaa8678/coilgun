@@ -1,9 +1,14 @@
 /*
-    MPU6050 Triple Axis Gyroscope & Accelerometer. Simple Gyroscope Example.
-    Read more: http://www.jarzebski.pl/arduino/czujniki-i-sensory/3-osiowy-zyroskop-i-akcelerometr-mpu6050.html
-    GIT: https://github.com/jarzebski/Arduino-MPU6050
-    Web: http://www.jarzebski.pl
-    (c) 2014 by Korneliusz Jarzebski
+Gyroscope test
+
+Hardware Setup
+==================================================================================================
+Components: arduino nano, MPU 6050
+
+Nano 5v -> 6050 VCC
+Nano GND -> 6050 GND
+Nano A5 -> 6050 SCL
+Nano A4 -> 6050 SDA 
 */
 
 #include <Wire.h>
