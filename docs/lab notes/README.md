@@ -5,8 +5,7 @@
     <td><img src="20230708211334.jpg" alt="20230708211334.jpg" width="400"></td>
     <td><img src="20230714193824.jpg" alt="20230714193824.jpg" width="400"></td>
     <td><img src="20230714193826.jpg" alt="20230714193826.jpg" width="400"></td>
-    <td><img src="20230715193926.jpg" alt="20230715193926.jpg" width="400"></td>
-    <td><img src="20230719160526.jpg" alt="20230719160526.jpg" width="400"></td>
+
   </tr>
   <tr>
     <td><img src="20230810124905.jpg" alt="20230810124905.jpg" width="400"></td>
