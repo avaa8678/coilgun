@@ -14,6 +14,7 @@ Ava Chen | Annie Peng | Sophia Chen
 - ["GitHub Tutorial without using the Command Line"](https://www.youtube.com/watch?v=tCuPbW31vAw&t=600s) - *Andreas Spiess (Youtuber)*
 - ["Elegant READMEs for GitHub"](https://www.yegor256.com/2019/04/23/elegant-readme.html) - *Yegor Bugayenko*
 - [Using an 8x8 LED Matrix (788BS) | ARDUINO # 21](https://www.youtube.com/watch?v=DgFaVclIYOY)
+- [LED 8x8 Dot Matrix MAX7219 Arduino Tutorial - Elegoo The Most Complete Starter Kit](https://www.youtube.com/watch?v=H6Vs98-Cev0)
 
 ## Tools
 - [Arduino Mega Simulator](https://wokwi.com/projects/new/arduino-mega) - Useful tool to simulate Arduino Mega environment to test our wiring, with examples
