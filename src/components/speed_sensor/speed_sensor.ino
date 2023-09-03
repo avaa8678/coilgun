@@ -6,10 +6,10 @@ int speedPin = 2;
 
 int val = 0;
 int oldval = 0;
-int currtime;
-int newtime;
+long currtime;
+long newtime;
 
-double LENGTH = 20.0;                
+double LENGTH = 200000.0;                
 
 
 void setup() {
@@ -27,7 +27,7 @@ void loop() {
     delay(5000); // to see speed
     if (oldval == 0)
     {
-      currtime = millis(); // get time in ms      
+      currtime = micros(); // get time in ms      
     }
     oldval = 1;
   }
@@ -36,11 +36,14 @@ void loop() {
     Serial.println("NOT blocked");
     if (oldval == 1)
     {
-      newtime = millis(); // get time in ms
+      newtime = micros(); // get time in ms
       Serial.print("Time is ");
-      Serial.println(newtime - currtime);
+
+      double timeLapse = (newtime - currtime)/1000.0;
+      Serial.println(timeLapse);
+      Serial.println(newtime-currtime);
       Serial.print("Velocity is ");
-      Serial.print(LENGTH/(newtime - currtime)); // v = d/t
+      Serial.print(LENGTH/timeLapse); // v = d/t
       Serial.println(" mm/millis ");
 
 
