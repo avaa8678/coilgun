@@ -25,8 +25,8 @@ LedControl lc = LedControl(12, 10, 11, 1);
 /******** BELOW ARE THE VALUE WE NEED TO TURN TO SET CENTER ***********/
 /**********************************************************************/
 // Complimentary Filter for roll and pitch
-const float rollCenterCali = 5.27;
-const float pitchCenterCali = -0.20;
+const float rollCenterCali = 5.20;
+const float pitchCenterCali = -0.10;
 
 float step = 1;                   // this determine the LED moving steps
 const int calibrateTimes = 1000;  // How may iteration you want to calibrate the gyrometer
@@ -209,48 +209,51 @@ void loop() {
     }
     /**************** DEBUGGING *********************/
 
-    Serial.print(" | Roll: ");
+    Serial.print(" | Roll:");
     Serial.print(angleRollOutput);
-    Serial.print(" | Pitch: ");
-    Serial.print(anglePitchOutput);
-    Serial.print(" | Col: ");
+    Serial.print(",");
+    Serial.print(" | Pitch:");
+    Serial.println(anglePitchOutput);
+    /*        
+    Serial.print(" | Col:");
     Serial.print(col);
-    Serial.print(" | Row: ");
+    Serial.print(" | Row:");
     Serial.println(row);
-    /*    
-    Serial.print(" | RollLow4: ");
+
+    Serial.print(" | RollLow4:");
     Serial.print(rollLow4);
-    Serial.print(" | RollLow3: ");
+    Serial.print(" | RollLow3:");
     Serial.print(rollLow3);
-    Serial.print(" | RollLow2: ");
+    Serial.print(" | RollLow2:");
     Serial.print(rollLow2);
-    Serial.print(" | RollLow1: ");
+    Serial.print(" | RollLow1:");
     Serial.print(rollLow1);
-    Serial.print(" | RollHigh1: ");
+    Serial.print(" | RollHigh1:");
     Serial.print(rollHigh1);
-    Serial.print(" | RollHigh2: ");
+    Serial.print(" | RollHigh2:");
     Serial.print(rollHigh2);
-    Serial.print(" | RollHigh3: ");
+    Serial.print(" | RollHigh3:");
     Serial.print(rollHigh1);
-    Serial.print(" | RollHigh4: ");
+    Serial.print(" | RollHigh4:");
     Serial.print(rollHigh4);
-    Serial.print(" | PitchLow4: ");
+    Serial.print(" | PitchLow4:");
     Serial.print(pitchLow4);
-    Serial.print(" | PitchLow3: ");
+    Serial.print(" | PitchLow3:");
     Serial.print(pitchLow3);
-    Serial.print(" | PitchLow2: ");
+    Serial.print(" | PitchLow2:"");
     Serial.print(pitchLow2);
-    Serial.print(" | PitchLow1: ");
+    Serial.print(" | PitchLow1:");
     Serial.print(pitchLow1);
-    Serial.print(" | PitchHigh1: ");
+    Serial.print(" | PitchHigh1:");
     Serial.print(pitchHigh1);
-    Serial.print(" | PitchHigh2: ");
+    Serial.print(" | PitchHigh2:");
     Serial.print(pitchHigh2);
-    Serial.print(" | PitchHigh3: ");
+    Serial.print(" | PitchHigh3:");
     Serial.print(pitchHigh3);
-    Serial.print(" | PitchHigh4: ");
+    Serial.print(" | PitchHigh4:");
     Serial.println(pitchHigh4);
-*/
+    */
+
     lc.setIntensity(0, 8);  // Set the brightness to a medium value
 
     // Light up the 4 LED quadrant of the position of row & col (x & y axis)
