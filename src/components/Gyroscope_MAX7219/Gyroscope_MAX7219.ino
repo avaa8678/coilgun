@@ -28,12 +28,12 @@ LedControl lc = LedControl(12, 10, 11, 1);
 /**********************************************************************/
 int filter = 2;  // 1 = Complimentary Filter, 2 = Kalman Filter (default), Any other value = No Filter
 // Initial compliment for roll and pitch
-const int tolerance = 10;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
+const int tolerance = 5;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
 
 /**********************************************************************/
 /********  Less important tuning parameters ***************************/
 /**********************************************************************/
-const float rollCenterCali = 1;
+const float rollCenterCali = 0;
 const float pitchCenterCali = 0;
 float dt = 0.01;                  // Time interval in seconds for kalman
 float step = 1;                   // this determine the LED moving steps
@@ -237,7 +237,7 @@ void loop() {
     //Serial.print(" | anglePitchOutputComp:");
     //Serial.print(anglePitchOutputComp);
 
-    Serial.println("Min:-50,Max:50");
+    Serial.print("Min:-50,Max:50");
     Serial.print(" | Roll:");
     Serial.print(angleRollOutput);
     Serial.print(",");
