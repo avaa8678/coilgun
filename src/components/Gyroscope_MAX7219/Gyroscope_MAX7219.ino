@@ -26,24 +26,27 @@ LedControl lc = LedControl(12, 10, 11, 1);
 /**********************************************************************/
 /******** BELOW ARE THE VALUE WE NEED TO TURN TO SET CENTER ***********/
 /**********************************************************************/
-int filter = 1;  // 1 = Complimentary Filter (default), 2 = Kalman Filter, Any other value = No Filter
+int filter = 2;  // 1 = Complimentary Filter, 2 = Kalman Filter (default), Any other value = No Filter
 // Initial compliment for roll and pitch
-const float rollCenterCali = 5.20;
-const float pitchCenterCali = -0.10;
+const int tolerance = 10;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
 
-// Create the Kalman instances
-Kalman kalmanX;
-Kalman kalmanY;
-float dt = 0.01;  // Time interval in seconds
-
+/**********************************************************************/
+/********  Less important tuning parameters ***************************/
+/**********************************************************************/
+const float rollCenterCali = 1;
+const float pitchCenterCali = 0;
+float dt = 0.01;                  // Time interval in seconds for kalman
 float step = 1;                   // this determine the LED moving steps
 const int calibrateTimes = 1000;  // How may iteration you want to calibrate the gyrometer
-const int tolerance = 0;          // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
 const float rollCenter = 0;       // this determine the LED moving degree on roll when center
 const float pitchCenter = 0;      // this determine the LED moving degree on roll when center
 /**********************************************************************/
 /******************** END OF VALUE TUNNING ****************************/
 /**********************************************************************/
+
+// Create the Kalman instances
+Kalman kalmanX;
+Kalman kalmanY;
 
 const float pitchLow4 = pitchCenter - 4 * step;
 const float pitchLow3 = pitchCenter - 3 * step;
@@ -179,14 +182,13 @@ void loop() {
     // To dampen the pitch and roll angles a complementary filter is used
     anglePitchOutput = anglePitchOutput * 0.9 + anglePitch * 0.1;  // Take 90% of the output pitch value and add 10% of the raw pitch value
     angleRollOutput = angleRollOutput * 0.9 + angleRoll * 0.1;     // Take 90% of the output roll value and add 10% of the raw roll value
-
-    //float angleRollOutputComp = angleRollOutput * 0.9 + angleRoll * 0.1;
-    //float anglePitchOutputComp = anglePitchOutput * 0.9 + anglePitch * 0.1;
-
   } else if (filter == 2) {
     //  To dampen the pitch and roll angles a kalman filter is used
     anglePitchOutput = kalmanX.getAngle(anglePitchAcc, gyroX / GYROSCOPE_SENSITIVITY, dt);  // Calculate the pitch angle using a Kalman filter
     angleRollOutput = kalmanY.getAngle(angleRollAcc, gyroY / GYROSCOPE_SENSITIVITY, dt);    // Calculate the roll angle using a Kalman filter
+  } else {
+    anglePitchOutput = anglePitch;
+    angleRollOutput = angleRoll;
   }
 
   // Wait until the loopTimer reaches 4000us (250Hz) before starting the next loop
@@ -235,8 +237,7 @@ void loop() {
     //Serial.print(" | anglePitchOutputComp:");
     //Serial.print(anglePitchOutputComp);
 
-    //Serial.println("Min:0,Max:1023");
-
+    Serial.println("Min:-50,Max:50");
     Serial.print(" | Roll:");
     Serial.print(angleRollOutput);
     Serial.print(",");
