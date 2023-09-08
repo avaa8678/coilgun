@@ -26,28 +26,21 @@ LedControl lc = LedControl(12, 10, 11, 1);
 /**********************************************************************/
 /******** BELOW ARE THE VALUE WE NEED TO TURN TO SET CENTER ***********/
 /**********************************************************************/
-int filter = 2;  // 1 = Complimentary Filter, 2 = Kalman Filter (default), Any other value = No Filter
-// Initial compliment for roll and pitch
-const int tolerance = 5;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
-
+int filter = 2;     // 0 = ALL filter (DEBUGGING ONLY) 1 = Complimentary Filter, 2 = Kalman Filter (default), Any other value = No Filter
+int tolerance = 0;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
+float step = 1;   // this determine the LED moving degrees - 1 means 1 degree move the LED up
 /**********************************************************************/
 /********  Less important tuning parameters ***************************/
 /**********************************************************************/
-const float rollCenterCali = 0;
-const float pitchCenterCali = 0;
-float dt = 0.01;                  // Time interval in seconds for kalman
-float step = 1;                   // this determine the LED moving steps
+const float rollCenterCali = 0;   // debugging purpose for uneven surface
+const float pitchCenterCali = 0;  // debugging purpose for uneven surface
 const int calibrateTimes = 1000;  // How may iteration you want to calibrate the gyrometer
-const float rollCenter = 0;       // this determine the LED moving degree on roll when center
-const float pitchCenter = 0;      // this determine the LED moving degree on roll when center
+const float dt = 0.01;            // Time interval in seconds for kalman
 /**********************************************************************/
 /******************** END OF VALUE TUNNING ****************************/
 /**********************************************************************/
-
-// Create the Kalman instances
-Kalman kalmanX;
-Kalman kalmanY;
-
+const float rollCenter = 0;   // this determine the LED moving degree on roll when center, default better be 0, use variable just in case we need to put the 6050 in different direction
+const float pitchCenter = 0;  // this determine the LED moving degree on roll when center, default better be 0, use variable just in case we need to put the 6050 in different direction
 const float pitchLow4 = pitchCenter - 4 * step;
 const float pitchLow3 = pitchCenter - 3 * step;
 const float pitchLow2 = pitchCenter - 2 * step;
@@ -69,8 +62,9 @@ int row, col, temp;                                          // row, column for 
 int displayCount = 0;                                        // Display counter
 int gyroX, gyroY, gyroZ, anglePitchBuffer, angleRollBuffer;  // Variables for Gyroscope
 long gyroXCal, gyroYCal, gyroZCal, accX, accY, accZ, accTotalVector;
-float angleRollAcc, anglePitchAcc, anglePitch, angleRoll, anglePitchOutput, angleRollOutput;
+float angleRollAcc, anglePitchAcc, anglePitch, angleRoll, anglePitchOutput, angleRollOutput, angleRollOutputComp, anglePitchOutputComp;
 boolean setGyroAngles;
+Kalman kalmanX, kalmanY;  // Create the Kalman instances
 
 void setupMpu6050Registers() {
   // Activate the MPU-6050
@@ -178,15 +172,46 @@ void loop() {
     setGyroAngles = true;        // Set the IMU started flag
   }
 
-  if (filter == 1) {
+  if (filter == 0) {
+    // DEBUGGING, PLOT ONLY!!! Use ALL fitlers
+    Serial.print("Min:-10,Max:10");
+    Serial.print(" | RawX:");
+    Serial.print(angleRoll);
+    Serial.print(",");
+    Serial.print(" | RawY:");
+    Serial.print(anglePitch);
+    Serial.print(",");
+
+    angleRollOutputComp = angleRollOutputComp * 0.9 + angleRoll * 0.1;     // Take 90% of the output roll value and add 10% of the raw roll value
+    anglePitchOutputComp = anglePitchOutputComp * 0.9 + anglePitch * 0.1;  // Take 90% of the output pitch value and add 10% of the raw pitch value
+    Serial.print(" | ComplementaryX:");
+    Serial.print(angleRollOutputComp);
+    Serial.print(",");
+    Serial.print(" | ComplementaryY:");
+    Serial.print(anglePitchOutputComp);
+    Serial.print(",");
+
+    float angleRollOutputKalman = kalmanY.getAngle(angleRollAcc, gyroY / GYROSCOPE_SENSITIVITY, dt);    // Calculate the roll angle using a Kalman filter
+    float anglePitchOutputKalman = kalmanX.getAngle(anglePitchAcc, gyroX / GYROSCOPE_SENSITIVITY, dt);  // Calculate the pitch angle using a Kalman filter
+    Serial.print(" | KalmanX:");
+    Serial.print(angleRollOutputKalman);
+    Serial.print(",");
+    Serial.print(" | KalmanY:");
+    Serial.print(anglePitchOutputKalman);
+
+    angleRollOutput = angleRollOutputKalman;
+    anglePitchOutput = anglePitchOutputKalman;
+    Serial.println();
+  } else if (filter == 1) {
     // To dampen the pitch and roll angles a complementary filter is used
     anglePitchOutput = anglePitchOutput * 0.9 + anglePitch * 0.1;  // Take 90% of the output pitch value and add 10% of the raw pitch value
     angleRollOutput = angleRollOutput * 0.9 + angleRoll * 0.1;     // Take 90% of the output roll value and add 10% of the raw roll value
   } else if (filter == 2) {
-    //  To dampen the pitch and roll angles a kalman filter is used
+    // To dampen the pitch and roll angles a Kalman filter is used
     anglePitchOutput = kalmanX.getAngle(anglePitchAcc, gyroX / GYROSCOPE_SENSITIVITY, dt);  // Calculate the pitch angle using a Kalman filter
     angleRollOutput = kalmanY.getAngle(angleRollAcc, gyroY / GYROSCOPE_SENSITIVITY, dt);    // Calculate the roll angle using a Kalman filter
   } else {
+    // NO filter, just raw pitch and roll
     anglePitchOutput = anglePitch;
     angleRollOutput = angleRoll;
   }
@@ -230,23 +255,15 @@ void loop() {
     } else if (anglePitchOutput > pitchHigh4) {
       col = 0;
     }
-    /**************** DEBUGGING *********************/
-    //Serial.print(" | angleRollOutputComp:");
-    //Serial.print(angleRollOutputComp);
-    //Serial.print(",");
-    //Serial.print(" | anglePitchOutputComp:");
-    //Serial.print(anglePitchOutputComp);
 
-    Serial.print("Min:-50,Max:50");
-    Serial.print(" | Roll:");
-    Serial.print(angleRollOutput);
-    Serial.print(",");
-    Serial.print(" | Pitch:");
-    Serial.println(anglePitchOutput);
-    //Serial.print(" | Col:");
-    //Serial.print(col);
-    //Serial.print(" | Row:");
-    //Serial.println(row);
+    if (filter != 0) {
+      Serial.print(" | Roll:");
+      Serial.print(angleRollOutput);
+      Serial.print(",");
+      Serial.print(" | Pitch:");
+      Serial.print(anglePitchOutput);
+      Serial.println();
+    }
 
     // Light up the 4 LED quadrant of the position of row & col (x & y axis)
     lc.setLed(0, col, row, true);
