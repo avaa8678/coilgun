@@ -1,62 +1,56 @@
 /*
-Gyroscope + MAX7219
+Electronic Leveler
+avaleichen@gmail.com
 
 Hardware Setup
 ==================================================================================================
-Components: arduino nano, MPU 6050
+Components: arduino nano, MPU6050 Gyroscope, MAX7219 LED Matrix
 
-Nano 5v -> 6050 VCC
-Nano GND -> 6050 GND
-Nano A5 -> 6050 SCL
-Nano A4 -> 6050 SDA 
+Nano 5v   <->   6050 VCC
+Nano GND  <->   6050 GND
+Nano A5   <->   6050 SCL
+Nano A4   <->   6050 SDA 
 
-Nano 5v -> MAX7219 VCC
-Nano GND -> MAX7219 GND
-Nano D10 -> MAX7219 CLK
-Nano D11 -> MAX7219 CS
-Nano D12 -> MAX7219 DIN
+Nano 5v   <->   MAX7219 VCC
+Nano GND  <->   MAX7219 GND
+Nano D10  <->   MAX7219 CLK
+Nano D11  <->   MAX7219 CS
+Nano D12  <->   MAX7219 DIN
+==================================================================================================
 */
 
 #include <Wire.h>                  // Include Wire Library for I2C
 #include <LedControl.h>            // Include for 8X8 Dot Matrix
 #include <Kalman.h>                // Include Kalman filter library - KalmanFilter library by TKJElectronics
+#include <MadgwickAHRS.h>          // Include Madgwick filter library - MadgwickAHRS algorithm
 #define GYROSCOPE_SENSITIVITY 131  // used by Kalman Filter
 LedControl lc = LedControl(12, 10, 11, 1);
 
 /**********************************************************************/
-/******** BELOW ARE THE VALUE WE NEED TO TURN TO SET CENTER ***********/
+/******** BELOW ARE THE VALUE WE NEED TO TUNE TO SET ******************/
 /**********************************************************************/
-int filter = 2;     // 0 = ALL filter (DEBUGGING ONLY) 1 = Complimentary Filter, 2 = Kalman Filter (default), Any other value = No Filter
-int tolerance = 0;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
-float step = 1;   // this determine the LED moving degrees - 1 means 1 degree move the LED up
+int filter = 0;     // 0 or any value = Kalman Filter (default), 1 = Raw Data No filter, 2 = Complimentary Filter, 3 = Madgwick Filter
+int tolerance = 5;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
+float step = 1;     // this determine the LED moving degrees - 1 means 1 degree move the LED up
 /**********************************************************************/
 /********  Less important tuning parameters ***************************/
 /**********************************************************************/
-const float rollCenterCali = 0;   // debugging purpose for uneven surface
 const float pitchCenterCali = 0;  // debugging purpose for uneven surface
+const float rollCenterCali = 0;   // debugging purpose for uneven surface
 const int calibrateTimes = 1000;  // How may iteration you want to calibrate the gyrometer
 const float dt = 0.01;            // Time interval in seconds for kalman
 /**********************************************************************/
 /******************** END OF VALUE TUNNING ****************************/
 /**********************************************************************/
-const float rollCenter = 0;   // this determine the LED moving degree on roll when center, default better be 0, use variable just in case we need to put the 6050 in different direction
-const float pitchCenter = 0;  // this determine the LED moving degree on roll when center, default better be 0, use variable just in case we need to put the 6050 in different direction
-const float pitchLow4 = pitchCenter - 4 * step;
-const float pitchLow3 = pitchCenter - 3 * step;
-const float pitchLow2 = pitchCenter - 2 * step;
-const float pitchLow1 = pitchCenter - step;  // center is between High1 > angleRollOutput > Low1, so it is in the middle of Low1 and High1
-const float pitchHigh1 = pitchCenter + step;
-const float pitchHigh2 = pitchCenter + 2 * step;
-const float pitchHigh3 = pitchCenter + 3 * step;
-const float pitchHigh4 = pitchCenter + 4 * step;
-const float rollLow4 = rollCenter - 4 * step;
-const float rollLow3 = rollCenter - 3 * step;
-const float rollLow2 = rollCenter - 2 * step;
-const float rollLow1 = rollCenter - step;  // center is between High1 > angleRollOutput > Low1, so it is in the middle of Low1 and High1
-const float rollHigh1 = rollCenter + step;
-const float rollHigh2 = rollCenter + 2 * step;
-const float rollHigh3 = rollCenter + 3 * step;
-const float rollHigh4 = rollCenter + 4 * step;
+const float LEDCenter = 0;  // this determine the LED moving degree on roll when center, default better be 0, use variable just in case we need to put the 6050 in different direction
+const float Low4 = LEDCenter - 4 * step;
+const float Low3 = LEDCenter - 3 * step;
+const float Low2 = LEDCenter - 2 * step;
+const float Low1 = LEDCenter - step;  // center is between High1 > angleRollOutput > Low1, so it is in the middle of Low1 and High1
+const float High1 = LEDCenter + step;
+const float High2 = LEDCenter + 2 * step;
+const float High3 = LEDCenter + 3 * step;
+const float High4 = LEDCenter + 4 * step;
 
 int row, col, temp;                                          // row, column for LED, temperurate received but not used
 int displayCount = 0;                                        // Display counter
@@ -65,6 +59,7 @@ long gyroXCal, gyroYCal, gyroZCal, accX, accY, accZ, accTotalVector;
 float angleRollAcc, anglePitchAcc, anglePitch, angleRoll, anglePitchOutput, angleRollOutput, angleRollOutputComp, anglePitchOutputComp;
 boolean setGyroAngles;
 Kalman kalmanX, kalmanY;  // Create the Kalman instances
+Madgwick madgwickFilter;  // Create a Madgwick filter object
 
 void setupMpu6050Registers() {
   // Activate the MPU-6050
@@ -132,6 +127,7 @@ void setup() {
   calibrateMpu6050();       // Calibrate MPU-6050
 
   Serial.begin(115200);  // Start Serial Monitor
+  madgwickFilter.begin(25);
 }
 
 void loop() {
@@ -141,81 +137,56 @@ void loop() {
   gyroX -= gyroXCal;
   gyroY -= gyroYCal;
   gyroZ -= gyroZCal;
-
   // Gyro angle calculations . Note 0.0000611 = 1 / (250Hz x 65.5)
-  anglePitch += gyroX * 0.0000611;  // Calculate the traveled pitch angle and add this to the anglePitch variable
-  angleRoll += gyroY * 0.0000611;   // Calculate the traveled roll angle and add this to the angleRoll variable
-
+  anglePitch += gyroX * 0.0000610687;  // Calculate the traveled pitch angle and add this to the anglePitch variable
+  angleRoll += gyroY * 0.0000610687;   // Calculate the traveled roll angle and add this to the angleRoll variable
   // 0.000001066 = 0.0000611 * (3.142(PI) / 180degr) The Arduino sin function is in radians
-  anglePitch += angleRoll * sin(gyroZ * 0.000001066);  // If the IMU has yawed transfer the roll angle to the pitch angle
-  angleRoll -= anglePitch * sin(gyroZ * 0.000001066);  // If the IMU has yawed transfer the pitch angle to the roll angle
-
+  anglePitch += angleRoll * sin(gyroZ * (0.0000610687 * DEG_TO_RAD));  // If the IMU has yawed transfer the roll angle to the pitch angle
+  angleRoll -= anglePitch * sin(gyroZ * (0.0000610687 * DEG_TO_RAD));  // If the IMU has yawed transfer the pitch angle to the roll angle
   // Accelerometer angle calculations
   accTotalVector = sqrt((accX * accX) + (accY * accY) + (accZ * accZ));  // Calculate the total accelerometer vector
-
   // 57.296 = 1 / (3.142 / 180) The Arduino asin function is in radians
   anglePitchAcc = asin((float)accY / accTotalVector) * RAD_TO_DEG;  // Calculate the pitch angle
   angleRollAcc = asin((float)accX / accTotalVector) * -RAD_TO_DEG;  // Calculate the roll angle
+  anglePitchAcc -= pitchCenterCali;                                 // Accelerometer calibration value for pitch
+  angleRollAcc -= rollCenterCali;                                   // Accelerometer calibration value for roll
 
-  anglePitchAcc -= pitchCenterCali;  // Accelerometer calibration value for pitch
-  angleRollAcc -= rollCenterCali;    // Accelerometer calibration value for roll
-
-  // drifting correction
-  if (setGyroAngles) {
-    // If the IMU has been running
-    anglePitch = anglePitch * 0.9996 + anglePitchAcc * 0.0004;  // Correct the drift of the gyro pitch angle with the accelerometer pitch angle
-    angleRoll = angleRoll * 0.9996 + angleRollAcc * 0.0004;     // Correct the drift of the gyro roll angle with the accelerometer roll angle
-  } else {
-    // IMU has just started
-    anglePitch = anglePitchAcc;  // Set the gyro pitch angle equal to the accelerometer pitch angle
-    angleRoll = angleRollAcc;    // Set the gyro roll angle equal to the accelerometer roll angle
-    setGyroAngles = true;        // Set the IMU started flag
-  }
-
-  if (filter == 0) {
-    // DEBUGGING, PLOT ONLY!!! Use ALL fitlers
-    Serial.print("Min:-10,Max:10");
-    Serial.print(" | RawX:");
-    Serial.print(angleRoll);
-    Serial.print(",");
-    Serial.print(" | RawY:");
-    Serial.print(anglePitch);
-    Serial.print(",");
-
-    angleRollOutputComp = angleRollOutputComp * 0.9 + angleRoll * 0.1;     // Take 90% of the output roll value and add 10% of the raw roll value
-    anglePitchOutputComp = anglePitchOutputComp * 0.9 + anglePitch * 0.1;  // Take 90% of the output pitch value and add 10% of the raw pitch value
-    Serial.print(" | ComplementaryX:");
-    Serial.print(angleRollOutputComp);
-    Serial.print(",");
-    Serial.print(" | ComplementaryY:");
-    Serial.print(anglePitchOutputComp);
-    Serial.print(",");
-
-    float angleRollOutputKalman = kalmanY.getAngle(angleRollAcc, gyroY / GYROSCOPE_SENSITIVITY, dt);    // Calculate the roll angle using a Kalman filter
-    float anglePitchOutputKalman = kalmanX.getAngle(anglePitchAcc, gyroX / GYROSCOPE_SENSITIVITY, dt);  // Calculate the pitch angle using a Kalman filter
-    Serial.print(" | KalmanX:");
-    Serial.print(angleRollOutputKalman);
-    Serial.print(",");
-    Serial.print(" | KalmanY:");
-    Serial.print(anglePitchOutputKalman);
-
-    angleRollOutput = angleRollOutputKalman;
-    anglePitchOutput = anglePitchOutputKalman;
-    Serial.println();
-  } else if (filter == 1) {
-    // To dampen the pitch and roll angles a complementary filter is used
-    anglePitchOutput = anglePitchOutput * 0.9 + anglePitch * 0.1;  // Take 90% of the output pitch value and add 10% of the raw pitch value
-    angleRollOutput = angleRollOutput * 0.9 + angleRoll * 0.1;     // Take 90% of the output roll value and add 10% of the raw roll value
+  if (filter == 1) {
+    // NO filter, just raw pitch and roll
+    angleRollOutput = angleRoll;
+    anglePitchOutput = anglePitch;
   } else if (filter == 2) {
+    // drifting correction
+    if (setGyroAngles) {
+      // If the IMU has been running
+      anglePitch = anglePitch * 0.9996 + anglePitchAcc * 0.0004;  // Correct the drift of the gyro pitch angle with the accelerometer pitch angle
+      angleRoll = angleRoll * 0.9996 + angleRollAcc * 0.0004;     // Correct the drift of the gyro roll angle with the accelerometer roll angle
+    } else {
+      // IMU has just started
+      anglePitch = anglePitchAcc;  // Set the gyro pitch angle equal to the accelerometer pitch angle
+      angleRoll = angleRollAcc;    // Set the gyro roll angle equal to the accelerometer roll angle
+      setGyroAngles = true;        // Set the IMU started flag
+    }
+    // To dampen the pitch and roll angles a complementary filter is used
+    anglePitchOutput = anglePitchOutput * 0.5 + anglePitch * 0.5;  // Take 90% of the output pitch value and add 10% of the raw pitch value
+    angleRollOutput = angleRollOutput * 0.5 + angleRoll * 0.5;     // Take 90% of the output roll value and add 10% of the raw roll value
+  } else if (filter == 3) {
+    // Gyro since we are using 250 degrees/seconds range -250 maps to a raw value of -32768 +250 maps to a raw value of 32767, so *250/32768 = *0.00763
+    // since we are using 2 g range -2 g maps to a raw value of -32768 +2 g maps to a raw value of 32767, so *2/32768
+    madgwickFilter.updateIMU(gyroX * 0.00762939453125, gyroY * 0.00762939453125, gyroZ * 0.00762939453125, accX * 0.00006103515625, accY * 0.00006103515625, accZ * 0.00006103515625);
+    // Get the roll and pitch angles from the Madgwick filter, depends your moving direction, roll / pitch may change. In our case it is better consistent with kalman and complementary filter above
+    angleRollOutput = madgwickFilter.getPitch();
+    anglePitchOutput = madgwickFilter.getRoll();
+  } else {
     // To dampen the pitch and roll angles a Kalman filter is used
     anglePitchOutput = kalmanX.getAngle(anglePitchAcc, gyroX / GYROSCOPE_SENSITIVITY, dt);  // Calculate the pitch angle using a Kalman filter
     angleRollOutput = kalmanY.getAngle(angleRollAcc, gyroY / GYROSCOPE_SENSITIVITY, dt);    // Calculate the roll angle using a Kalman filter
-  } else {
-    // NO filter, just raw pitch and roll
-    anglePitchOutput = anglePitch;
-    angleRollOutput = angleRoll;
   }
 
+  display(angleRollOutput, anglePitchOutput);
+}
+
+void display(float angleRollOutput, float anglePitchOutput) {
   // Wait until the loopTimer reaches 4000us (250Hz) before starting the next loop
   displayCount = displayCount + 1;  // Increment the display counter
 
@@ -223,47 +194,46 @@ void loop() {
     lc.clearDisplay(0);  // Clear the 8X8 display
 
     // Get Col Position
-    if (angleRollOutput < rollLow4) {
+    if (angleRollOutput < Low4) {
       row = 6;
-    } else if ((angleRollOutput > rollLow3) && (angleRollOutput < rollLow2)) {
+    } else if ((angleRollOutput > Low3) && (angleRollOutput < Low2)) {
       row = 5;
-    } else if ((angleRollOutput > rollLow2) && (angleRollOutput < rollLow1)) {
+    } else if ((angleRollOutput > Low2) && (angleRollOutput < Low1)) {
       row = 4;
-    } else if ((angleRollOutput > rollLow1) && (angleRollOutput < rollHigh1)) {
+    } else if ((angleRollOutput > Low1) && (angleRollOutput < High1)) {
       row = 3;
-    } else if ((angleRollOutput > rollHigh1) && (angleRollOutput < rollHigh2)) {
+    } else if ((angleRollOutput > High1) && (angleRollOutput < High2)) {
       row = 2;
-    } else if ((angleRollOutput > rollHigh2) && (angleRollOutput < rollHigh3)) {
+    } else if ((angleRollOutput > High2) && (angleRollOutput < High3)) {
       row = 1;
-    } else if (angleRollOutput > rollHigh4) {
+    } else if (angleRollOutput > High4) {
       row = 0;
     }
 
     // Get Row Position
-    if (anglePitchOutput < pitchLow4) {
+    if (anglePitchOutput < Low4) {
       col = 6;
-    } else if ((anglePitchOutput > pitchLow3) && (anglePitchOutput < pitchLow2)) {
+    } else if ((anglePitchOutput > Low3) && (anglePitchOutput < Low2)) {
       col = 5;
-    } else if ((anglePitchOutput > pitchLow2) && (anglePitchOutput < pitchLow1)) {
+    } else if ((anglePitchOutput > Low2) && (anglePitchOutput < Low1)) {
       col = 4;
-    } else if ((anglePitchOutput > pitchLow1) && (anglePitchOutput < pitchHigh1)) {
+    } else if ((anglePitchOutput > Low1) && (anglePitchOutput < High1)) {
       col = 3;
-    } else if ((anglePitchOutput > pitchHigh1) && (anglePitchOutput < pitchHigh2)) {
+    } else if ((anglePitchOutput > High1) && (anglePitchOutput < High2)) {
       col = 2;
-    } else if ((anglePitchOutput > pitchHigh2) && (anglePitchOutput < pitchHigh3)) {
+    } else if ((anglePitchOutput > High2) && (anglePitchOutput < High3)) {
       col = 1;
-    } else if (anglePitchOutput > pitchHigh4) {
+    } else if (anglePitchOutput > High4) {
       col = 0;
     }
 
-    if (filter != 0) {
-      Serial.print(" | Roll:");
-      Serial.print(angleRollOutput);
-      Serial.print(",");
-      Serial.print(" | Pitch:");
-      Serial.print(anglePitchOutput);
-      Serial.println();
-    }
+    Serial.print("Min:-10,Max:10");
+    Serial.print(" | Roll:");
+    Serial.print(angleRollOutput);
+    Serial.print(",");
+    Serial.print(" | Pitch:");
+    Serial.print(anglePitchOutput);
+    Serial.println();
 
     // Light up the 4 LED quadrant of the position of row & col (x & y axis)
     lc.setLed(0, col, row, true);
