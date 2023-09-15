@@ -31,7 +31,7 @@ LedControl lc = LedControl(12, 10, 11, 1);
 /**********************************************************************/
 int filter = 0;     // 0 or any value = Kalman Filter (default), 1 = Raw Data No filter, 2 = Complimentary Filter, 3 = Madgwick Filter
 int tolerance = 5;  // Tolerance 0-10 = Ultra Fast - Loose accuracy but averages ok. For 11-100 is more acurrate but slower as you scale up. This is basically a delay on when you want to start
-float step = 1;     // this determine the LED moving degrees - 1 means 1 degree move the LED up
+float step = 5;     // this determine the LED moving degrees - 1 means 1 degree move the LED up
 /**********************************************************************/
 /********  Less important tuning parameters ***************************/
 /**********************************************************************/
