@@ -1,0 +1,239 @@
+// Measures current from current sensor and writes to SD card and sets solid state relay switch
+// use timer interrupt in terms of milliseconds
+// current version 1.1.1
+//
+// version  date        change                                                  by
+// 1.1.1    12/23/2023  added new data structure for solid state switch input   SC
+//
+
+#include <SPI.h>
+#include <SD.h>
+#include <TimerOne.h>
+
+// Data are buffered and flushed BUFFERSIZE data points per SD write.
+// SD card library set
+// Mega
+// MISO = pin 50
+// MOSI = pin 51
+// SCLK = pin 52
+// CS   = pin 53
+// analogPin = A4
+
+// Nano/UNO
+// MOSI = pin 11
+// MISO = pin 12
+// SCLK = pin 13
+// CS = 4
+// analogPin = A4
+
+const int analogPin = A4; 
+const int CS_PIN = 53;
+//const int analogPin = A4; 
+// const int CS_PIN = 4;
+
+const int BUFFERSIZE = 50;//100
+const int SAMPLINGPERIOD = 1000; // 1ms
+const int TOTAL_TIMES = 100;//200
+int times_flushing_recording = 0;
+int counter = 0;
+long timeBuffer[BUFFERSIZE];
+float voltageBuffer[BUFFERSIZE];
+
+//KB input
+
+String filename = "";
+int numInPulse;
+const int maxNumInPulse = 10; 
+String kbInp ="";
+
+
+typedef enum SSRState{  // <-- define different SSR switch state (forward, buffer_forward, buffer_reverse, reverse)
+forward,
+bufForward,  // buffer forward
+bufReverse,  // buffer reverse
+reverse
+};
+
+struct SSRInput {
+  SSRState state;
+  int duration; //ms
+};
+
+
+const int numTransit = 4;
+SSRInput SSRI[numTransit] = {{forward,30},{bufForward,10},{reverse,40},{bufReverse,50}};
+int countDownTransit=0;
+int roundTransit=0;
+//const int numTransit = sizeof(SSRI)/sizeof(SSRI[0]);
+long timestamp_SSR[numTransit];
+
+// Digital output for SSR switch to control the current flow direction using digital pin 31-34
+const int SSR1_DOUT = 31;//31-34
+const int SSR2_DOUT = 32;
+const int SSR3_DOUT = 33;
+const int SSR4_DOUT = 34;
+
+// const int SSR1_DOUT = 6;//31-34
+// const int SSR2_DOUT = 7;
+// const int SSR3_DOUT = 8;
+// const int SSR4_DOUT = 9;
+
+void setup() {
+  Serial.begin(9600);
+
+  Serial.println("\n\n\n\n\n\n\n\n\n");
+
+  Serial.println("Enter file name(no spaces) ex. [coilnumber-BulletType[F/M]-date[YYYYMMDD-runNum].csv");
+  while (Serial.available() == 0){}
+    filename = Serial.readString();
+    filename.trim();  
+
+  Serial.println(filename);
+ 
+  Serial.println("Initializing Card");
+  pinMode(CS_PIN, OUTPUT);
+  if (!SD.begin(CS_PIN)) {
+     Serial.println("Card Failure.");
+     return;
+  }
+  Serial.println("Card Ready.");
+
+  // initalize the Digital output for SSR switches -  set SSR1/2/3/4 digital pin
+  pinMode(SSR1_DOUT, OUTPUT); 
+  pinMode(SSR2_DOUT, OUTPUT); 
+  pinMode(SSR3_DOUT, OUTPUT); 
+  pinMode(SSR4_DOUT, OUTPUT); 
+  digitalWrite(SSR1_DOUT, LOW);  
+  digitalWrite(SSR2_DOUT, LOW);  
+  digitalWrite(SSR3_DOUT, LOW);  
+  digitalWrite(SSR4_DOUT, LOW);    
+
+  // Keystroke to trigger the fly  
+
+  Serial.println("Please 'ENTER' twice to start the fly");
+  while (Serial.available() == 0){}
+  kbInp = Serial.readString();
+
+  Serial.println("Start the fly................");
+
+  // set the first SSR relay state change countdown in ms
+  countDownTransit = 0;
+
+  // count the Launch
+  countDown();
+
+  // set the interrupt for defined time interval (SAMPLINGPERIOD) and start current sensor measurement and write to SD card as a file
+
+  Timer1.initialize(SAMPLINGPERIOD);
+  Timer1.attachInterrupt(writeToCard); 
+
+}
+
+void loop() {
+
+}
+
+void countDown()
+{}
+
+void setSSR(SSRInput swState)
+{
+  Serial.println(swState.state);    
+  Serial.println(swState.duration);   
+  timestamp_SSR[roundTransit] = micros();
+  Serial.println(timestamp_SSR[roundTransit]);  
+
+  if (swState.state == forward )
+  {
+    Serial.println("setForward-start");     
+    digitalWrite(SSR1_DOUT, HIGH);
+    digitalWrite(SSR2_DOUT, HIGH);    
+    //delay(swState.duration);
+    Serial.println("setForward-end");    
+  }
+  if (swState.state== bufForward )
+  {
+    Serial.println("setbuffer_forward-start");     
+    digitalWrite(SSR1_DOUT, LOW);
+    digitalWrite(SSR2_DOUT, LOW);    
+    //delay(swState.duration);  
+    Serial.println("setbuffer_forward-end");   
+  } 
+  if (swState.state == bufReverse )
+  {
+    Serial.println("setbuffer_reverse-start");      
+    digitalWrite(SSR3_DOUT, LOW);
+    digitalWrite(SSR4_DOUT, LOW);    
+    //delay(swState.duration);
+    Serial.println("setbuffer_reverse-end");     
+  }     
+  if (swState.state == reverse)
+  {
+    Serial.println("setReverse-start");        
+    digitalWrite(SSR3_DOUT, HIGH);
+    digitalWrite(SSR4_DOUT, HIGH);    
+    //delay(swState.duration);
+    Serial.println("setReverse-end");        
+  }  
+}
+
+void writeToCard() {
+  if (times_flushing_recording < TOTAL_TIMES) {
+    long timestamp = micros();
+    timeBuffer[counter] = timestamp;
+  // read the input on analog pin analogPin=A8:
+    int sensorValue = analogRead(analogPin); 
+  // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):     
+    voltageBuffer[counter] = sensorValue * (5.0 / 1023.0);
+
+  // set SSR switch operation based on the input array (SSRI)
+
+    if (countDownTransit == 0 && roundTransit< numTransit)
+    {
+         setSSR(SSRI[roundTransit]);
+         countDownTransit=SSRI[roundTransit].duration*1000/SAMPLINGPERIOD;
+         roundTransit++;           
+     }
+    else
+     if (countDownTransit != 0 && roundTransit< numTransit)
+       {countDownTransit--;}
+
+    counter++;
+    counter = counter % BUFFERSIZE;
+  //if counter == 0, the buffer is full, need to flush
+    if (counter == 0) {            
+      File dataFile = SD.open(filename, FILE_WRITE);
+  
+      for (int i = 0; i < BUFFERSIZE; i++) {
+        dataFile.print(i); 
+        dataFile.print(",");
+        dataFile.print(timeBuffer[i]);
+        dataFile.print(",");
+        dataFile.println(voltageBuffer[i],4);
+        //Serial.print(timeBuffer[i]);  
+        //Serial.print(",");                
+        //Serial.println(voltageBuffer[i],4);   
+            
+      }
+
+      //Serial.print(times_flushing_recording);
+      //Serial.println("write");  
+
+      if (times_flushing_recording == TOTAL_TIMES-1)
+      {
+        for (int j=0;j<numTransit;j++)
+        {
+          dataFile.println("Input Pulse Actual Time:");          
+          dataFile.print(timestamp_SSR[j]);
+          Serial.println(timestamp_SSR[j]);
+          if (j != numTransit-1)
+            {dataFile.print(",");   }         
+        }
+
+      }
+
+      dataFile.close();
+      times_flushing_recording++;
+    }
+  } // if (recording)
+}
