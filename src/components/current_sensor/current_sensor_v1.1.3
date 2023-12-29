@@ -1,10 +1,10 @@
 // Measures current from current sensor and writes to SD card and sets solid state relay switch
 // use timer interrupt in terms of milliseconds
-// current version 1.1.1
+// current version 1.1.3
 //
-// version  date        change                                                  by
-// 1.1.1    12/23/2023  added new data structure for solid state switch input   SC
-//
+// version  date        change                                                                            by
+// 1.1.0    12/23/2023  added new data structure for solid state switch input                             SC
+// 1.1.3    12/28/2023  added comments and array to store time stamp of start time of pulse state change  SC
 
 #include <SPI.h>
 #include <SD.h>
@@ -39,12 +39,12 @@ int counter = 0;
 long timeBuffer[BUFFERSIZE];
 float voltageBuffer[BUFFERSIZE];
 
-//KB input
-
+//KB input for filename
 String filename = "";
+
+// number of input pulse**not implemented yet
 int numInPulse;
 const int maxNumInPulse = 10; 
-String kbInp ="";
 
 
 typedef enum SSRState{  // <-- define different SSR switch state (forward, buffer_forward, buffer_reverse, reverse)
@@ -54,12 +54,15 @@ bufReverse,  // buffer reverse
 reverse
 };
 
+// structure to store SSR Relay state and duration
+// state - pulse state ex. forward, bufForward, bufReverse, reverse
+// duration - lenght of pulse in ms
 struct SSRInput {
   SSRState state;
   int duration; //ms
 };
 
-
+// user input for input pulse to control SSR switch ON/OFF
 const int numTransit = 4;
 SSRInput SSRI[numTransit] = {{forward,30},{bufForward,10},{reverse,40},{bufReverse,50}};
 int countDownTransit=0;
@@ -136,6 +139,8 @@ void loop() {
 void countDown()
 {}
 
+// function to set SSR switch state based on SSRInput
+// log start time of each state in timestamp_SSR array
 void setSSR(SSRInput swState)
 {
   Serial.println(swState.state);    
@@ -177,6 +182,9 @@ void setSSR(SSRInput swState)
   }  
 }
 
+// write to SD card and counts duration of each pulse and change pulse state
+// timeBuffer array and voltageBuffer array stores values based on BUFFERSIZE and writes to SD card when the counter reaches BUFFERSIZE
+// finish writing to SD card when times_flushing_recording reaches TOTAL_TIMES
 void writeToCard() {
   if (times_flushing_recording < TOTAL_TIMES) {
     long timestamp = micros();
