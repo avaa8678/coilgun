@@ -4,11 +4,11 @@
 Ava Chen | Annie Peng | Sophia Chen
 
 ## Links
-- [Google Drive (Internal)](https://drive.google.com/drive/u/0/folders/1kPVlKQgt4IuTnx3cwziApn0uUnmumPuY) - Project learning materials, manual, instructions etc.
-- [Pictures/Screenshots](https://github.com/avaa8678/coilgun/tree/main/docs/hardware) - Project pictures, screenshots
-- [Lab Log Screenshot](https://github.com/avaa8678/coilgun/tree/main/docs/lab%20notes) - Lab logs
+- [Google Drive (Internal)](https://drive.google.com/drive/u/0/folders/1kPVlKQgt4IuTnx3cwziApn0uUnmumPuY) - circuit diagrams, data, references, etc.
+- [Pictures/Screenshots](https://github.com/avaa8678/coilgun/tree/main/docs/hardware) - pictures, screenshots
+- [Lab Log Screenshot](https://github.com/avaa8678/coilgun/tree/main/docs/lab%20notes) - lab notes
 
-## Tutorial
+## Tutorials
 - ["Exploring Arduino"](https://www.exploringarduino.com/content2/ch1/) - *Jeremy Blum*
 - ["Arduino API"](https://www.arduino.cc/reference/en/) - *API References from official Arduino website*
 - ["GitHub Tutorial without using the Command Line"](https://www.youtube.com/watch?v=tCuPbW31vAw&t=600s) - *Andreas Spiess (Youtuber)*
