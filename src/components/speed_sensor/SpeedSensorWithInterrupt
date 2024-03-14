@@ -1,40 +1,18 @@
 #include <LiquidCrystal_I2C.h>// include the library code
-// #include <LCD.h>
 
-
-
-const byte speedometer1 = 2;      
-const byte speedometer2 = 3;
-// int output7 = 7;
-//d11 -- d7(lcd)
-//d10 -- d6
-//d9 -- d5 (shorted to e)
-//d8 -- d4
-//d7 -- e
-//d6 -- rs
-//rs -- d6
+const byte speedometer1 = 2; //digital pin 2 
+const byte speedometer2 = 3; // digital pin 3
              
-
-
-int val = 0;
-int val2 = 0;
-int oldval = 0;
-long time2 = 0;
+long time2 = 0; 
 long time1 = 0;
 
+double LENGTH = 0.0128; //length of the magnet
 
-double LENGTH = 0.0095;    
-
-
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-
-
+LiquidCrystal_I2C lcd(0x27, 16, 2); // set up lcd panel
 
 void setup() {
-  pinMode(speedometer1, INPUT);
-  pinMode(speedometer2, INPUT);
-  pinMode(7, OUTPUT);
+  pinMode(speedometer1, INPUT); //set photogate 1 as an input
+  pinMode(speedometer2, INPUT); //set photogate 2 as an input
 
   lcd.init();
   lcd.clear();
@@ -42,105 +20,35 @@ void setup() {
   lcd.setCursor(0, 0);
 
   Serial.begin(9600);  // for serial monitor
-  attachInterrupt(digitalPinToInterrupt(speedometer1), triggerSpeedometer1, RISING);
-  attachInterrupt(digitalPinToInterrupt(speedometer2), triggerSpeedometer2, RISING);
-  Serial.print("Should have printed something");
+  attachInterrupt(digitalPinToInterrupt(speedometer1), triggerSpeedometer1, RISING); //hardware interrupt when signal changes from low to high (photogate is being intercepted)
+  attachInterrupt(digitalPinToInterrupt(speedometer2), triggerSpeedometer2, RISING); //hardware interrupt when signal changes from low to high (photogate is being intercepted)
   
 }
 
 void triggerSpeedometer1() {
-  // lcd.setCursor(0, 0);
-  time1 = micros();
-  // lcd.print(time1);
-  Serial.print(time1);
+  time1 = micros(); //get timestamp first photogate is first intercepted
 }
 
 void triggerSpeedometer2() {
-  // lcd.setCursor(0, 8);
-  time2 = micros();
-  // lcd.print(time2);
-  Serial.print(time2);
-  // lcd.setCursor(1, 0);
-  // lcd.print("Velocity: ");
-  // lcd.print(LENGTH/timeLapse);
-  // lcd.print(" m/s ");
+  time2 = micros();  //get timestamp second photogate is first intercepted
 }
 
-
 void loop() {
-  if(time1 != 0 && time2 != 0) {
-    lcd.setCursor(0, 0);
-    lcd.print(time1);
+  if(time1 != 0 && time2 != 0) { //if both photogates have been intercepted
+    lcd.setCursor(0, 0); 
+    lcd.print(time1); //print eight digits of time when photogate 1 is intercepted
     lcd.setCursor(8, 0);
-    lcd.print(time2);
+    lcd.print(time2); //print eight digits of time when photogate 2 is intercepted
     lcd.setCursor(0, 1);
     lcd.print("Velocity:");
-    double timeLapse = (time2 - time1)/1000000.0;
-    lcd.print(LENGTH/timeLapse);
+    double timeLapse = (time2 - time1)/1000000.0; // calculate the time elapsed between the two interceptions
+    lcd.print(LENGTH/timeLapse); //length/timelapse = velocity (distance/time = rate)
     lcd.print("m/s ");
-    time1 = 0;
-    time2 = 0;
-    delay(20000);
-    lcd.clear();
+    delay(20000); // display values for 20s
+    time1 = 0; //resetting values for next round
+    time2 = 0; //resetting values for next round
+    lcd.clear(); //clear screen for next round
   }
-  
-  // lcd.setCursor(0,0);
-  // // lcd.print("Hello!");
-  // // Serial.print("PRINT");
-
-  // // Serial.println(val);
-  // if (val == HIGH)
-  // {
-  //  time1 = micros();
-  //  digitalWrite(7, HIGH);
-  //   // while (val == HIGH){
-  //   //   val = digitalRead(speedPin1);
-  //   // }
-  //   // time1 = micros();
-  //   // lcd.println("I am LOW");
-  //   // Serial.println("I am LOW");
-  //   val2 = digitalRead(speedPin2);
-  //   // Serial.print("Blocked, current val = ");
-  //   // Serial.println(val);
-  //   //delay(5000); // to see speed
-  //   int counter = 0;
-  //   while(val2 == 0 && counter == 0) {
-  //     val2 = digitalRead(speedPin2);
-  //     if (val2 == HIGH) {
-  //       time2 = micros();
-  //       // delay(10);
-  //       // digital
-  //       // while(val2 == HIGH) {
-  //       //   val2 = digitalRead(speedPin2);
-  //       // }
-  //       counter++;
-  //       // Serial.println("I am LOooW");
-  //       // time2 = micros();
-  //       Serial.print("Time from ");
-  //       Serial.print(time1);
-  //       Serial.print(" to ");
-  //       Serial.print(time2);
-  //       double timeLapse = (time2 - time1)/1000000.0;
-  //       Serial.println(timeLapse);
-  //       Serial.println(time2-time1);
-  //       // Serial.print(LENGTH/timeLapse);
-  //       Serial.print("Velocity is ");
-  //       Serial.print(LENGTH/timeLapse); // v = d/t
-  //       lcd.print("Velocity: ");
-  //       lcd.setCursor(0,1);
-  //       lcd.print(LENGTH/timeLapse);
-  //       lcd.print(" m/s ");
-  //       Serial.println(" m/s ");
-  //       delay(2000);
-  //       digitalWrite(7, LOW);
-
-
-
-
-      //  delay(5000); // to see speed
-      // }
-    // }
-  // }
 }
 
 
